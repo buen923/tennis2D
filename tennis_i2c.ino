@@ -4,8 +4,14 @@
 #include <math.h>
 
 constexpr int8_t TARGET_ADDRESS = 0x10;
-
-
+const int PLAYER_INIT_BALLX=2700;
+const int ENEMY_INIT_BALLX=9700;
+const int INIT_BALLY=3200;
+const int PLAYER0_INITX=2700;
+const int PLAYER1_INITX=9700;
+const int PLAYER2_INITX=2700;
+const int PLAYER3_INITX=9700;
+const int PLAYER_INITY=3200;
 const unsigned char title_1[] PROGMEM = {
  0xff, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05,
  0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05,
@@ -51,6 +57,13 @@ enum Scene {
 };
 
 Scene scene;
+
+enum Characters {
+  PLAYER,
+  ENEMY,
+};
+
+Characters winflag;
 byte selectY[2]={0,0};
 byte selected[2]={0,0};
 bool playMode=0;
@@ -79,7 +92,6 @@ struct Vec {
 
 
 struct Player {
-  bool flag;
   bool hit;
   float x;
   float y;
@@ -124,20 +136,14 @@ struct Ball {
   }
 };
 
-struct Enemy : Player {
-  bool attack;
-  int interval=30;
-};
-
 Player player[4];
-Enemy enemy;
 Ball ball;
 
-void collide() {
-if(player[0].flag==0) player[1].hit=0;
-if(player[0].flag==1) player[0].hit=0;
-if(player[0].hit==0) {
-    if (player[0].sec1 || player[0].sec2 || player[0].sec3 || player[0].sec4) {
+void Collide() {
+if(winflag==ENEMY) player[1].hit=0;player[2].hit=0;
+if(winflag==PLAYER) player[0].hit=0;player[3].hit=0;
+if(player[0].hit==0 && player[3].hit==0) {
+  if (player[0].sec1 || player[0].sec2 || player[0].sec3 || player[0].sec4) {
     beep.tone(beep.freq(600), 1);
     ball.cnt = 90 - player[0].cnt;
     ball.v+=5;
@@ -146,10 +152,10 @@ if(player[0].hit==0) {
     if (player[3].sec1 || player[3].sec2 || player[3].sec3 || player[3].sec4) {
     beep.tone(beep.freq(600), 1);
     ball.cnt = 90 - player[3].cnt;
+    ball.v+=5;
+    player[3].hit=1;
   }
 }
-
-
   if ((player[0].sec1 || player[0].sec2 || player[3].sec1 || player[3].sec2 ||ball.turn == 1)) {
     ball.turn = 1;
     ball.move(-ball.v * cos(rad(ball.cnt)), ball.v * sin(rad(ball.cnt)));
@@ -157,17 +163,21 @@ if(player[0].hit==0) {
     ball.turn = 2;
     ball.move(ball.v * cos(rad(ball.cnt)), -ball.v * sin(rad(ball.cnt)));
   }
+
+
   if(player[1].serve==0 ||player[2].serve==0 || (serveCount==0 || serveCount>250)) {
-if(player[1].hit==0) {
+if(player[1].hit==0 && player[2].hit==0) {
     if (player[1].sec1 || player[1].sec2 || player[1].sec3 || player[1].sec4) {
-      beep.tone(beep.freq(600), 1);
+    beep.tone(beep.freq(600), 1);
     ball.cnt = 90 - player[1].cnt;
     ball.v+=5;
     player[1].hit=1;
     }
     if (player[2].sec1 || player[2].sec2 || player[2].sec3 || player[2].sec4) {
-      beep.tone(beep.freq(600), 1);
+    beep.tone(beep.freq(600), 1);
     ball.cnt = 90 - player[2].cnt;
+    ball.v+=5;
+    player[1].hit=1;
     }
 }
   if ((player[1].sec3 || player[1].sec4 || player[2].sec3 || player[2].sec4 || ball.turn == 3)) {
@@ -180,32 +190,28 @@ if(player[1].hit==0) {
     ball.move(0, 0);
   }
   }
-  
-
-
-
 }
 
 
-void winflag() {
+void Scoring() {
       if ((ball.x < 64 && ball.x > 0) && (ball.y < 54 && ball.y > 10)) {
-    player[0].flag = 0;
+    winflag = ENEMY;
   } else if ((ball.x < 128 && ball.x > 64) && (ball.y < 54 && ball.y > 10)) {
-    player[0].flag = 1;
+    winflag = PLAYER;
   }
 
 
 
   if ((ball.x < 128 && ball.x > 64) && (ball.y < 0 || ball.y > 64) || ball.x > 128) {
     ball.cnt=0;
-    if (player[0].flag == 1) {
+    if (winflag == PLAYER) {
       player[0].score += 1;
     } else {
       player[1].score += 1;
       player[1].attack=1;
       player[2].attack=1;
     }   
-     player[0].flag = 0;
+     winflag = ENEMY;
     
   switch(totalscore) {
       case 0:
@@ -239,12 +245,12 @@ void winflag() {
     ball.active = 1;
   } else if ((ball.x < 64 && ball.x > 0) && (ball.y < 0 || ball.y > 64) || ball.x < 0) {
 
-    if (player[0].flag == 0) {
+    if (winflag == ENEMY) {
       player[1].score += 1;
     } else {
       player[0].score += 1;
     }
-    player[0].flag = 0;
+    winflag = ENEMY;
 
   switch(totalscore) {
       case 0:
@@ -320,34 +326,29 @@ void setup() {
   Serial.begin(9600);
   arduboy.clear();
   arduboy.setFrameRate(30);
-  player[0].fx = 150;
-  player[0].fy = 320;
-  player[0].x=15;
-  player[0].y=32;
+  player[0].fx=150;
+  player[0].fy=320;
   player[0].r = 3;
   player[0].l = 5;
-  player[1].fx = 1080;
-  player[1].fy = 320;
   player[1].x=108;
   player[1].y=32;
   player[1].homeX=108;
   player[1].homeY=32;
   player[1].r = 3;
-  player[1].l = 10;
+  player[1].l = 5;
   player[1].interval=30;
-    player[2].x=120;
+  player[2].x=120;
   player[2].y=32;  
-    player[2].r = 3;
+  player[2].r = 3;
   player[2].l = 5;
-    player[2].interval=30;
-      player[3].x=30;
+  player[2].interval=30;
+  player[3].x=30;
   player[3].y=32;
-
   player[3].r = 3;
   player[3].l = 5;
   player[3].serve=1;
   player[3].interval=30;
-  ball.Vec(2700, 3200);  
+  ball.Vec(2700,3200); 
 
   ball.active = 1;
   ball.r = 1;
@@ -355,20 +356,20 @@ void setup() {
 }
 
 
-void gamescene() {
+void GameScene() {
 
 player[1].homeX=108-0.5*(56-player[0].x)-2*(player[1].score-player[0].score);
-collide(); 
+Collide(); 
 
 
 
-  winflag();
+Scoring();
 
     ball.x=ball.fx/100;
     ball.y=ball.fy/100;
 
 if(playMode==0) {
-if(ball.fx==9700 && ball.fy==3200) {serveCount+=1;}else{serveCount=0;}
+if(ball.x==97 && ball.y==32) {serveCount+=1;}else{serveCount=0;}
 
   if(arduboy.pressed(A_BUTTON)) {
           if (player[0].y < ball.y && player[0].cnt < 136) {
@@ -396,8 +397,7 @@ if(ball.fx==9700 && ball.fy==3200) {serveCount+=1;}else{serveCount=0;}
  }
 
 if(serveCount==0) {
-Serial.println(player[1].cnt);
- if(!(player[0].flag==0  &&(ball.y<10 ||ball.y>54))) {
+ if(!(winflag==ENEMY &&(ball.y<10 ||ball.y>54))) {
 if(player[1].y>=ball.y+5) {
     player[1].y-=0.5;
   }else if(player[1].y<=ball.y-5){
@@ -425,7 +425,7 @@ if(ball.turn==1 || ball.turn==2) {
   
   }
 
-  if(ball.fx==9700 && ball.fy==3200) {
+  if(ball.x==97 && ball.y==32) {
   if(gameMode==0) {
   if(player[1].x<97+8) {
     player[1].x+=0.5;
@@ -442,7 +442,7 @@ if(ball.turn==1 || ball.turn==2) {
   }
 
   
-if(!(ball.fx==9700 && ball.fy==3200) || gameMode==1) {
+if(!(ball.x==97 && ball.y==32) || gameMode==1) {
   if(ball.x<64) {player[1].serve=0;}
 if(player[1].x-ball.x<player[1].interval&&player[1].x-ball.x>5  && player[1].serve==0) {
     player[1].attack=1;
@@ -566,7 +566,7 @@ player[TARGET].y=player[TARGET].fy/10;
 
 if(gameMode==1) {
   if(serveCount==0) {
- if(!(player[0].flag==0  &&(ball.y<10 ||ball.y>54))) {
+ if(!(winflag==ENEMY  &&(ball.y<10 ||ball.y>54))) {
 if(player[2].y>ball.y+5) {
     player[2].y-=0.5;
   }else if(player[2].y<ball.y-5){
@@ -669,7 +669,7 @@ if(player[2].cnt%360!=0){
 
 
   
-   if(!(player[0].flag==1  &&(ball.y<10 ||ball.y>54))) {
+   if(!(winflag==PLAYER  &&(ball.y<10 ||ball.y>54))) {
 if(player[3].y>ball.y+5) {
     player[3].y-=0.5;
   }else if(player[3].y<ball.y-5){
@@ -732,7 +732,7 @@ if(ball.x-player[3].x<player[3].interval&&ball.x-player[3].x>5 && player[3].serv
 }
 
 
-void gamecheck() {
+void WinCheck() {
   arduboy.setCursor(48, 10);
   arduboy.print(player[0].score);
     arduboy.print("-");
@@ -777,7 +777,6 @@ void loop() {
   // put your main code here, to run repeatedly:
   if (!(arduboy.nextFrame())) return;
   arduboy.clear();
-
   beep.timer();
   arduboy.pollButtons();
   count+=1;
@@ -843,17 +842,14 @@ if(selected[0]==0) {
 if(selected[1]==1) {
     if(playMode==0 && gameMode==0) {
      scene=GAME;
-    arduboy.clear();
   }else if(playMode==0 && gameMode==1) {
      scene=GAME;
-    arduboy.clear();
   }else if(playMode==1 && gameMode==0) {
      scene=WAITING;
-    arduboy.clear();
   }else if(playMode==1 && gameMode==1) {
     scene=WAITING;
-    arduboy.clear();
   }
+arduboy.clear();
 }
 
   }
@@ -882,10 +878,10 @@ if(selected[1]==1) {
   }
 switch(scene) {
   case GAME:
-  gamescene();
+  GameScene();
   break;
   case RESULT:
-  gamecheck();
+  WinCheck();
   break;
 }
 
