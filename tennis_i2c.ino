@@ -4,14 +4,14 @@
 #include <math.h>
 
 constexpr int8_t TARGET_ADDRESS = 0x10;
-const int PLAYER_INIT_BALLX=2700;
-const int ENEMY_INIT_BALLX=9700;
-const int INIT_BALLY=3200;
-const int PLAYER0_INITX=2700;
-const int PLAYER1_INITX=9700;
-const int PLAYER2_INITX=2700;
-const int PLAYER3_INITX=9700;
-const int PLAYER_INITY=3200;
+const int PLAYER_INIT_BALLFX=2700;
+const int ENEMY_INIT_BALLFX=9700;
+const int INIT_BALLFY=3200;
+const int PLAYER0_INITFX=150;
+const int PLAYER1_INITFX=1080;
+const int PLAYER2_INITFX=1200;
+const int PLAYER3_INITFX=300;
+const int PLAYER_INITFY=320;
 const unsigned char title_1[] PROGMEM = {
  0xff, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05,
  0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05,
@@ -64,6 +64,7 @@ enum Characters {
 };
 
 Characters winflag;
+
 byte selectY[2]={0,0};
 byte selected[2]={0,0};
 bool playMode=0;
@@ -111,6 +112,20 @@ struct Player {
   bool attack;
   bool serve;
   int interval;
+  Player() {
+    fx=0;fy=0;r=0;l=0;interval=0;
+    }
+  Player(int fx,int fy,float r,float l,int interval) {
+    this->fx=fx;
+    this->fy=fy;
+    this->r=r;
+    this->l=l;
+    this->interval=interval;
+  }
+  void Vec(float x, float y) {
+    this->x = x;
+    this->y = y;
+  }
 };
 
 struct Ball {
@@ -126,9 +141,9 @@ struct Ball {
   float dy;
   int cnt;
   bool flag;
-  void Vec(float _x, float _y) {
-    fx = _x;
-    fy = _y;
+  void Vec(float fx, float fy) {
+    this->fx = fx;
+    this->fy = fy;
   }
   void move(float _dx, float _dy) {
     fx += _dx;
@@ -136,7 +151,13 @@ struct Ball {
   }
 };
 
-Player player[4];
+Player player[4] = {
+    Player(PLAYER0_INITFX, PLAYER_INITFY, 3, 5, 0),
+    Player(PLAYER1_INITFX, PLAYER_INITFY, 3, 5, 30),
+    Player(PLAYER2_INITFX, PLAYER_INITFY, 3, 5, 30),
+    Player(PLAYER3_INITFX, PLAYER_INITFY, 3, 5, 30)
+};
+
 Ball ball;
 
 void Collide() {
@@ -326,28 +347,24 @@ void setup() {
   Serial.begin(9600);
   arduboy.clear();
   arduboy.setFrameRate(30);
-  player[0].fx=150;
-  player[0].fy=320;
-  player[0].r = 3;
-  player[0].l = 5;
-  player[1].x=108;
-  player[1].y=32;
-  player[1].homeX=108;
-  player[1].homeY=32;
-  player[1].r = 3;
-  player[1].l = 5;
-  player[1].interval=30;
-  player[2].x=120;
-  player[2].y=32;  
-  player[2].r = 3;
-  player[2].l = 5;
-  player[2].interval=30;
-  player[3].x=30;
-  player[3].y=32;
-  player[3].r = 3;
-  player[3].l = 5;
-  player[3].serve=1;
-  player[3].interval=30;
+  // player[1].x=108;
+  // player[1].y=32;
+  // player[1].homeX=108;
+  // player[1].homeY=32;
+  // player[1].r = 3;
+  // player[1].l = 5;
+  // player[1].interval=30;
+  // player[2].x=120;
+  // player[2].y=32;  
+  // player[2].r = 3;
+  // player[2].l = 5;
+  // player[2].interval=30;
+  // player[3].x=30;
+  // player[3].y=32;
+  // player[3].r = 3;
+  // player[3].l = 5;
+  // player[3].serve=1;
+  // player[3].interval=30;
   ball.Vec(2700,3200); 
 
   ball.active = 1;
@@ -367,9 +384,15 @@ Scoring();
 
     ball.x=ball.fx/100;
     ball.y=ball.fy/100;
+    
+    for(int i=0;i<4;i++) {
+      player[i].Vec(player[i].fx/10,player[i].fy/10);      
+    }
+
 
 if(playMode==0) {
 if(ball.x==97 && ball.y==32) {serveCount+=1;}else{serveCount=0;}
+  
 
   if(arduboy.pressed(A_BUTTON)) {
           if (player[0].y < ball.y && player[0].cnt < 136) {
@@ -385,41 +408,41 @@ if(ball.x==97 && ball.y==32) {serveCount+=1;}else{serveCount=0;}
       }
   }
    if (arduboy.pressed(LEFT_BUTTON)) {
-   player[0].x -= 0.5;
+   player[0].fx -= 5;
  } else if (arduboy.pressed(RIGHT_BUTTON) && player[0].x + player[0].r + player[0].l < 64) {
-   player[0].x += 0.5;
+   player[0].fx += 5;
  } 
 
   if (arduboy.pressed(UP_BUTTON)) {
-   player[0].y -= 0.5;
+   player[0].fy -= 5;
  } else if (arduboy.pressed(DOWN_BUTTON)) {
-   player[0].y += 0.5;
+   player[0].fy += 5;
  }
 
 if(serveCount==0) {
  if(!(winflag==ENEMY &&(ball.y<10 ||ball.y>54))) {
 if(player[1].y>=ball.y+5) {
-    player[1].y-=0.5;
+    player[1].fy-=5;
   }else if(player[1].y<=ball.y-5){
-    player[1].y+=0.5;
+    player[1].fy+=5;
   }else if(player[1].x-ball.x<10&&player[1].y<=ball.y+8&&player[1].cnt<0) {
-    player[1].y+=0.5;
+    player[1].fy+=5;
   }else if(player[1].x-ball.x<10&&player[1].y>=ball.y-8&&player[1].cnt>0) {
-    player[1].y-=0.5;
+    player[1].fy-=5;
   } 
  }
 
 if(ball.turn==1 || ball.turn==2) {
     if(player[1].x>ball.x+20 && player[1].x-player[1].r-player[1].l>64 &&
    ((ball.cnt>45 && ball.cnt<90)||(ball.cnt>225 && ball.cnt<270)||(ball.cnt>-90 && ball.cnt<-45)||(ball.cnt>90 && ball.cnt<135))) {
-    player[1].x-=0.5;
+    player[1].fx-=5;
   }
   
 }else if(player[1].x>player[1].homeX && player[1].x-player[1].r-player[1].l>64) {
-    player[1].x-=0.5;
+    player[1].fx-=5;
   }else {
     if(player[1].x<player[1].homeX && player[1].x+player[1].r<128) {
-    player[1].x+=0.5;
+    player[1].fx+=5;
   }  
 }
   
@@ -428,16 +451,16 @@ if(ball.turn==1 || ball.turn==2) {
   if(ball.x==97 && ball.y==32) {
   if(gameMode==0) {
   if(player[1].x<97+8) {
-    player[1].x+=0.5;
+    player[1].fx+=5;
   }else if(player[1].x>97+8) {
-    player[1].x-=0.5;
+    player[1].fx-=5;
   }
   }
 
   if(player[1].y<32+5) {
-    player[1].y+=0.5;
+    player[1].fy+=5;
   }else if(player[1].y>32+5) {
-    player[1].y-=0.5;
+    player[1].fy-=5;
   }
   }
 
@@ -476,7 +499,7 @@ if(player[1].cnt%360!=0){
     }
   }else if(serveCount>300) {
 
-    player[1].x-=1.0;
+    player[1].fx-=10;
   }
 
       if(serveCount>serveTime) {
@@ -515,10 +538,10 @@ Wire.write(ball.fy & 0xFF);
    player[role].fy += 5;
  }
 
-player[CONTROLLER].x=player[CONTROLLER].fx/10;
-player[CONTROLLER].y=player[CONTROLLER].fy/10;
-     player[TARGET].x=player[TARGET].fx/10;
-player[TARGET].y=player[TARGET].fy/10;
+// player[CONTROLLER].x=player[CONTROLLER].fx/10;
+// player[CONTROLLER].y=player[CONTROLLER].fy/10;
+//      player[TARGET].x=player[TARGET].fx/10;
+// player[TARGET].y=player[TARGET].fy/10;
   if (role == CONTROLLER) {
   // player[0]操作
   if(arduboy.pressed(A_BUTTON)) {
@@ -904,7 +927,7 @@ switch(scene) {
     player[i].sec3 = player[i].x0 >= ball.x - 1 && player[i].x1 <= ball.x + 1 && player[i].y0 < ball.y && player[i].y1 > ball.y;
     player[i].sec4 = player[i].x0 <= ball.x + 1 && player[i].x1 >= ball.x - 1 && player[i].y0 < ball.y && player[i].y1 > ball.y;
 
-      player[i].x0 = player[i].x - player[i].r*cos(rad(player[i].cnt));
+    player[i].x0 = player[i].x - player[i].r*cos(rad(player[i].cnt));
   player[i].y0 = player[i].y + player[i].r* sin(rad(player[i].cnt));
   player[i].x1 = player[i].x - (player[i].r + player[i].l)* cos(rad(player[i].cnt));
   player[i].y1 = player[i].y + (player[i].r + player[i].l)* sin(rad(player[i].cnt));
