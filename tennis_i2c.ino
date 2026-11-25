@@ -4,14 +4,14 @@
 #include <math.h>
 
 constexpr int8_t TARGET_ADDRESS = 0x10;
-const int PLAYER_INIT_BALLFX=2700;
-const int ENEMY_INIT_BALLFX=9700;
-const int INIT_BALLFY=3200;
-const int PLAYER0_INITFX=150;
-const int PLAYER1_INITFX=1080;
-const int PLAYER2_INITFX=1200;
-const int PLAYER3_INITFX=300;
-const int PLAYER_INITFY=320;
+const int PLAYER_INIT_BALLX=27;
+const int ENEMY_INIT_BALLX=97;
+const int INIT_BALLY=32;
+const int PLAYER0_INITX=15;
+const int PLAYER1_INITX=108;
+const int PLAYER2_INITX=120;
+const int PLAYER3_INITX=30;
+const int PLAYER_INITY=32;
 const unsigned char title_1[] PROGMEM = {
  0xff, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05,
  0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05,
@@ -115,50 +115,54 @@ struct Player {
   Player() {
     fx=0;fy=0;r=0;l=0;interval=0;
     }
-  Player(int fx,int fy,float r,float l,int interval) {
-    this->fx=fx;
-    this->fy=fy;
+  Player(int x,int y,float r,float l,int interval) {
+    this->fx=x*10;
+    this->fy=y*10;
     this->r=r;
     this->l=l;
     this->interval=interval;
   }
-  void Vec(float x, float y) {
-    this->x = x;
-    this->y = y;
+  void Vec(int fx, int fy) {
+    this->x = fx/10;
+    this->y = fy/10;
   }
 };
 
 struct Ball {
-  bool active;
+  bool active=1;
   int turn;
   float x;
   float y;
   int fx;
   int fy;
-  float v=70;
-  float r;
-  float dx;
-  float dy;
+  int v;
+  float r=1;
   int cnt;
   bool flag;
-  void Vec(float fx, float fy) {
-    this->fx = fx;
-    this->fy = fy;
+  Ball(float x,float y,int v,int r) {
+    this->fx = x*100;
+    this->fy = y*100;
+    this->v = v;
+    this->r = r;
   }
-  void move(float _dx, float _dy) {
-    fx += _dx;
-    fy += _dy;
+  void Vec(float x, float y) {
+    this->fx = x*100;
+    this->fy = y*100;
+  }
+  void move(float dx, float dy) {
+    fx += dx;
+    fy += dy;
   }
 };
 
 Player player[4] = {
-    Player(PLAYER0_INITFX, PLAYER_INITFY, 3, 5, 0),
-    Player(PLAYER1_INITFX, PLAYER_INITFY, 3, 5, 30),
-    Player(PLAYER2_INITFX, PLAYER_INITFY, 3, 5, 30),
-    Player(PLAYER3_INITFX, PLAYER_INITFY, 3, 5, 30)
+    Player(PLAYER0_INITX, PLAYER_INITY, 3, 5, 0),
+    Player(PLAYER1_INITX, PLAYER_INITY, 3, 5, 30),
+    Player(PLAYER2_INITX, PLAYER_INITY, 3, 5, 30),
+    Player(PLAYER3_INITX, PLAYER_INITY, 3, 5, 30)
 };
 
-Ball ball;
+Ball ball(PLAYER_INIT_BALLX, INIT_BALLY,70,1);
 
 void Collide() {
 if(winflag==ENEMY) player[1].hit=0;player[2].hit=0;
@@ -247,7 +251,7 @@ void Scoring() {
       case 19:
       case 20:
       player[3].serve=1;
-    ball.Vec(2700, 3200);  
+    ball.Vec(PLAYER_INIT_BALLX, INIT_BALLY);  
 
       break;
       default:
@@ -255,7 +259,7 @@ void Scoring() {
     player[1].serve=1;
         player[2].serve=1;
     serveTime=random(270,311);
-      ball.Vec(9700, 3200);
+    ball.Vec(PLAYER_INIT_BALLX, INIT_BALLY);
 
         
     }   
@@ -286,14 +290,14 @@ void Scoring() {
       case 19:
       case 20:
       player[3].serve=1;
-    ball.Vec(2700, 3200);  
+    ball.Vec(PLAYER_INIT_BALLX, INIT_BALLY);  
   
       break;
       default:
     player[1].serve=1;
         player[2].serve=1;
     serveTime=random(270,311);
-      ball.Vec(9700, 3200);   
+     ball.Vec(ENEMY_INIT_BALLX, INIT_BALLY);   
     }   
         player[0].hit=0;
     player[1].hit=0;
@@ -365,8 +369,8 @@ void setup() {
   // player[3].l = 5;
   // player[3].serve=1;
   // player[3].interval=30;
-  ball.Vec(2700,3200); 
-
+  ball.Vec(PLAYER_INIT_BALLX, INIT_BALLY);  
+  ball.v=70;
   ball.active = 1;
   ball.r = 1;
   scene=TITLE;
@@ -375,18 +379,19 @@ void setup() {
 
 void GameScene() {
 
-player[1].homeX=108-0.5*(56-player[0].x)-2*(player[1].score-player[0].score);
+player[1].homeX=PLAYER1_INITX-0.5*(56-player[0].x)-2*(player[1].score-player[0].score);
 Collide(); 
 
 
 
 Scoring();
 
-    ball.x=ball.fx/100;
-    ball.y=ball.fy/100;
+ball.x=ball.fx/100;
+ball.y=ball.fy/100;
     
     for(int i=0;i<4;i++) {
-      player[i].Vec(player[i].fx/10,player[i].fy/10);      
+      player[i].x=player[i].fx/10;
+      player[i].y=player[i].fy/10;      
     }
 
 
